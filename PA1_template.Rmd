@@ -1,0 +1,116 @@
+---
+title: "Steps"
+author: "Oliver Bobon"
+date: "13 Jun 2015"
+output: html_document
+---
+
+--
+What is the mean total number of steps taken per day?
+--
+```{r, echo=TRUE}
+activity <- read.csv("~/Desktop/activity.csv")
+sum(activity$steps,na.rm=T)
+```
+--
+What is the mean number of steps taken per day?
+--
+```{r, echo=TRUE}
+mean(activity$steps, na.rm=TRUE)
+```
+--
+Here are the total number of step and the mean number of steps shown in a histogram:
+--
+```{r, echo=TRUE}
+dates = activity$date
+agg = aggregate(steps ~ date, activity, sum)
+dates = agg$date
+steps = agg$steps
+plot(agg,type="h",xlab="Date",ylab="Steps")
+```
+--
+Here are the average steps taken across all days for each interval shown in a histogram:
+--
+```{r, echo=TRUE}
+agg1 = aggregate(steps ~ interval, activity, mean)
+plot(agg1,type="l",xlab="Interval",ylab="Steps")
+```
+--
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps [Interval and number of steps]?
+--
+```{r, echo=TRUE}
+MaxSteps = data.frame(tapply(agg1[,2], agg1[,1], max))
+MaxSteps[which.max(agg1[,2]),1]
+```
+--
+Number of missing values:
+--
+```{r, echo=TRUE}
+sum(is.na(activity$steps))
+```
+--
+Missing Values
+--
+Now the na values are replaced with the mean number of steps for the specific interval.
+A new dataset is created with those values replaced.
+```{r, echo=TRUE}
+library(plyr)
+activityz = activity
+aggz = agg1
+test = join(activityz,aggz,by="interval")
+for(n in 1:length(test$steps)) {
+	if(is.na(test[n,1])) {test[n,1] = test[n,4]}
+}
+aggw = aggregate(steps ~ interval, test, mean)
+```
+--
+With the replaced values, a new histogram is made:
+--
+```{r, echo=TRUE}
+plot(aggw,type="l",xlab="Interval",ylab="Steps")
+```
+--
+Report of average and median steps with and without missing values
+--
+```{r, echo=TRUE}
+rep1 = aggregate(steps~date,activity,mean,na.rm=FALSE)
+rep2 = aggregate(steps~date,activity,median,na.rm=FALSE)
+rep3 = aggregate(steps~date,test,mean)
+rep4 = aggregate(steps~date,test,median)
+repa = cbind(rep1,rep2$steps)
+repb = cbind(rep3,rep4$steps)
+colnames(repa)=c("Date","average steps","median steps")
+colnames(repb)=c("Date","average steps","median steps")
+print(repa)
+print(repb)
+```
+
+--
+A panel plot containing a time series plot of the 5-minute interval and the avergage number of steps taken, averaged across all weekdays or weekend days.
+--
+
+```{r, echo=TRUE}
+k = as.Date(agg$date[1])
+test1 = cbind(test,wday="")
+colnames(test1)=c("steps","date","interval","mean","wday")
+
+wdayc = ""
+for(n in 1:length(test1$steps)) {
+  k = as.Date(test1$date[n])
+  k = weekdays(k)
+  if (k == "Saturday") {
+    wdayc[n] = "Weekend"
+  } else if (k=="Sunday") {
+    wdayc[n] = "Weekend"
+  }  else wdayc[n] = "Weekday" 
+}
+test2 = cbind(test1,wdayc)
+subwd = subset(test2,wdayc=="Weekday")
+subwe = subset(test2,wdayc=="Weekend")
+
+aggwd = aggregate(steps ~ interval,subwd,mean)
+aggwe = aggregate(steps ~ interval,subwe,mean)
+par(mfrow=c(1,2))
+plot(aggwd,type="l",xlab="Interval",ylab="Steps on Weekday")
+plot(aggwe,type="l",xlab="Interval",ylab="Steps on Weekend")
+```
